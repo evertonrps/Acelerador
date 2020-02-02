@@ -1,0 +1,11 @@
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\obj\Debug\netcoreapp3.1\Acelerador.csprojAssemblyReference.cache
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\obj\Debug\netcoreapp3.1\Acelerador.AssemblyInfoInputs.cache
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\obj\Debug\netcoreapp3.1\Acelerador.AssemblyInfo.cs
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\bin\Debug\netcoreapp3.1\Acelerador.exe
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\bin\Debug\netcoreapp3.1\Acelerador.deps.json
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\bin\Debug\netcoreapp3.1\Acelerador.runtimeconfig.json
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\bin\Debug\netcoreapp3.1\Acelerador.runtimeconfig.dev.json
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\bin\Debug\netcoreapp3.1\Acelerador.dll
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\bin\Debug\netcoreapp3.1\Acelerador.pdb
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\obj\Debug\netcoreapp3.1\Acelerador.dll
+D:\Users\everton\Documents\GitHub\Acelerador\Acelerador\obj\Debug\netcoreapp3.1\Acelerador.pdb
