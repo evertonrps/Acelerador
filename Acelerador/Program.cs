@@ -70,6 +70,21 @@ namespace Acelerador
             RunDotNetCommand($"sln add {apiName}.Data/{apiName}.Data.csproj", out output, out error); //Add Data to Solution
             RunDotNetCommand($"sln add {apiName}.IoC/{apiName}.IoC.csproj", out output, out error); //Add IoC to Solution
             
+            RunDotNetCommand($"add {apiName}.API/{apiName}.API.csproj reference {apiName}.Domain/{apiName}.Domain.csproj", out output, out error); //Add reference Domain  to API         
+            RunDotNetCommand($"add {apiName}.Data/{apiName}.Data.csproj reference {apiName}.Domain/{apiName}.Domain.csproj", out output, out error); //Add reference Domain  to Data
+            RunDotNetCommand($"add {apiName}.IoC/{apiName}.IoC.csproj reference {apiName}.Domain/{apiName}.Domain.csproj", out output, out error); //Add reference Domain  to Data
+            RunDotNetCommand($"add {apiName}.IoC/{apiName}.IoC.csproj reference {apiName}.Data/{apiName}.Data.csproj", out output, out error); //Add reference Domain  to Data
+            
+            RunDotNetCommand($"add {apiName}.API/{apiName}.API.csproj package Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer", out output, out error); //Add package Api Versioning to API
+            RunDotNetCommand($"add {apiName}.Data/{apiName}.Data.csproj package Dapper", out output, out error); //Add package Dapper to Data
+            RunDotNetCommand($"add {apiName}.Data/{apiName}.Data.csproj package Oracle.ManagedDataAccess.Core", out output, out error); //Add package Oracle to Data
+            RunDotNetCommand($"add {apiName}.IoC/{apiName}.IoC.csproj package Microsoft.Extensions.DependencyInjection.Abstractions", out output, out error); //Add Dependency Injection Abstractions to IoC
+            RunDotNetCommand($"add {apiName}.IoC/{apiName}.IoC.csproj package Microsoft.Extensions.Configuration", out output, out error); //Add Configuration to IoC
+            
+            File.Delete( @$"{projectDirectory}\{apiName}.Domain\Class1.cs");
+            File.Delete( @$"{projectDirectory}\{apiName}.Data\Class1.cs");
+            File.Delete( @$"{projectDirectory}\{apiName}.IoC\Class1.cs");
+            
             if (!string.IsNullOrEmpty(output))
             {
                 Console.WriteLine("Saída do comando dotnet:");
@@ -96,7 +111,7 @@ namespace Acelerador
 
         private static void FileText()
         {
-            string[,] array = new string[15, 3] {
+            string[,] array = new string[16, 3] {
             #region Controller
                 {@$"{projectDirectory}\{apiName}.API\Controllers\v{versao}\{ClassName}Controller.cs",
                     @"
@@ -108,6 +123,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using [apiName].Domain.Interfaces.Services;
 
 namespace [apiName].API.Controllers.v1
 {        
@@ -128,8 +144,8 @@ namespace [apiName].API.Controllers.v1
             #endregion
             #region Mapper
                 {@$"{projectDirectory}\{apiName}.API\MapperExtensions\{ClassName}MapperExtension.cs",
-@"using System.Linq;
-using System.Collections.Generic;
+@"using [apiName].API.ViewModel;
+using [apiName].Domain.Entities;
 
 namespace [apiName].API.MapperExtensions
 {
@@ -141,7 +157,7 @@ namespace [apiName].API.MapperExtensions
 
             return new [Class]Model
             {
-                [Class]ID = [LowerName].[Class]ID
+                Id = [LowerName].Id
             };
         }
 
@@ -149,10 +165,7 @@ namespace [apiName].API.MapperExtensions
         {                                  
             if ([LowerName] == null) return null;
 
-            return new [Class]
-            {
-                [Class]ID = [LowerName].[Class]ID
-            };
+            return [Class].Factory([LowerName].Id);
         }
 
         public static IEnumerable<[Class]Model> ToViewModelList(this IEnumerable<[Class]> [LowerName]List)
@@ -176,15 +189,12 @@ namespace [apiName].API.MapperExtensions
             #region ViewModel	
                  {@$"{projectDirectory}\{apiName}.API\ViewModels\{ClassName}ViewModel.cs",
                     @"
-using System;
-using System.Collections.Generic;
-
 namespace [apiName].API.ViewModel
 {
-    public class [Class]Model : EntityModel
+    public class [Class]Model
     {
         public [Class]Model() { }
-        public Guid [Class]ID { get; set; }      
+        public Guid Id { get; set; }      
     }
 }",
                     ""
@@ -194,23 +204,24 @@ namespace [apiName].API.ViewModel
                {@$"{projectDirectory}\{apiName}.Domain\Entities\{ClassName}.cs",
 @"using System;
 using System.Collections.Generic;
+using [apiName].Domain.SeedWork;
 
 namespace [apiName].Domain.Entities
 {
-    public class [Class] : Entity
+    public class [Class] : BaseEntity
     {
         protected [Class]() { }
 
-        private [Class](int id)
+        private [Class](Guid id)
         { 
-            
+            Id = id;
         }
 
-        public static [Class] Factory(int id) 
+        public static [Class] Factory(Guid id) 
         {
             [Class] resource = new [Class](id);
                 
-            resource.ValidateNow(new [Class]Validator(), resource);
+            //resource.ValidateNow(new [Class]Validator(), resource);
 
             return resource;
         }
@@ -233,25 +244,23 @@ public abstract class BaseEntity
             #region Validator                                   
                     {@$"{projectDirectory}\{apiName}.Domain\Validators\{ClassName}Validator.cs",
 @"
-using FluentValidation;
+//using FluentValidation;
 
-namespace [apiName].Domain.Validators
-{
-    public class [Class]Validator : EntityValidator<[Class]>
-    {
-        public [Class]Validator()
-        {
-        }
-    }
-}",
+//namespace [apiName].Domain.Validators;
+
+//    public class [Class]Validator : EntityValidator<[Class]>
+//    {
+//        public [Class]Validator()
+//        {
+//        }
+//    }
+",
 "",
                 },
             #endregion
             #region Domain.Interfaces.Services  		       
                 {@$"{projectDirectory}\{apiName}.Domain\Iterfaces\Services\I{ClassName}Service.cs",
-@"using System;
-using System.Threading.Tasks;
-using [apiName].Domain.Interfaces
+@"using [apiName].Domain.Entities;
 
 namespace [apiName].Domain.Interfaces.Services
 
@@ -259,12 +268,10 @@ namespace [apiName].Domain.Interfaces.Services
     public interface I[Class]Service
     {
         Task<[Class]?> GetById(Guid id);
-        Task<IEnumerable<[Class]>> GetAll();
-        Task<IEnumerable<[Class]>> GetActiveProducts();
-        Task<[Class]> Create([Class] createDto);
-        Task<[Class]> Update(Guid id, [Class] updateDto);
-        Task<bool> Delete(Guid id);
-        Task<bool> UpdateStock(Guid id, int quantity);
+        Task<IEnumerable<[Class]>> GetAll();        
+        Task<[Class]> Create([Class] createEntity);
+        Task<[Class]> Update(Guid id, [Class] updateEntity);
+        Task<bool> Delete(Guid id);        
     }
 }", ""
                },
@@ -273,6 +280,7 @@ namespace [apiName].Domain.Interfaces.Services
                 {@$"{projectDirectory}\{apiName}.Domain\Iterfaces\Repositories\IRepository.cs",
                     @"using System;
 using System.Threading.Tasks;
+using [apiName].Domain.SeedWork;
 
 namespace [apiName].Domain.Interfaces.Repositories
 
@@ -291,6 +299,7 @@ namespace [apiName].Domain.Interfaces.Repositories
                 {@$"{projectDirectory}\{apiName}.Domain\Iterfaces\Repositories\I{ClassName}Repository.cs",
                     @"using System;
 using System.Threading.Tasks;
+using [apiName].Domain.Entities;
 
 namespace [apiName].Domain.Interfaces.Repositories
 
@@ -324,7 +333,7 @@ public interface IUnitOfWork : IDisposable
             #region Domain.Interfaces.Infrastructure
                 
                 {@$"{projectDirectory}\{apiName}.Domain\Iterfaces\Repositories\IDbConnectionFactory.cs",
-                    @"
+                    @"using System.Data;
 namespace [apiName].Domain.Interfaces.Repositories;
 
 public interface IDbConnectionFactory
@@ -338,7 +347,10 @@ public interface IDbConnectionFactory
                 #endregion                
             #region Domain.Services  		       
                 {@$"{projectDirectory}\{apiName}.Domain\Services\{ClassName}Service.cs",
-                    @"
+                    @"using [apiName].Domain.Entities;
+using [apiName].Domain.Interfaces.Repositories;
+using [apiName].Domain.Interfaces.Services;
+
 namespace [apiName].Domain.Services;
 
 public class [Class]Service : I[Class]Service
@@ -350,110 +362,64 @@ public class [Class]Service : I[Class]Service
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<[Class]Dto?> GetByIdAsync(Guid id)
+    public async Task<[Class]?> GetById(Guid id)
     {
-        var [Class] = await _unitOfWork.[Class]s.GetByIdAsync(id);
-        return [Class] == null ? null : MapToDto([Class]);
+        var [LowerName] = await _unitOfWork.[Class]s.GetById(id);
+        return [LowerName];
     }
 
-    public async Task<IEnumerable<[Class]Dto>> GetAllAsync()
+    public async Task<IEnumerable<[Class]>> GetAll()
     {
-        var [Class]s = await _unitOfWork.[Class]s.GetAllAsync();
-        return [Class]s.Select(MapToDto);
+        var [LowerName]s = await _unitOfWork.[Class]s.GetAll();
+        return [LowerName]s;
     }
 
-    public async Task<IEnumerable<[Class]Dto>> GetActive[Class]sAsync()
+    public async Task<[Class]> Create([Class] createEntity)
     {
-        var [Class]s = await _unitOfWork.[Class]s.GetActive[Class]sAsync();
-        return [Class]s.Select(MapToDto);
+        var product = Product.Factory(createEntity.Id);
+
+        await _unitOfWork.[Class]s.Add([LowerName]);
+        await _unitOfWork.SaveChanges();
+
+        return [LowerName];
     }
 
-    public async Task<[Class]Dto> CreateAsync(Create[Class]Dto createDto)
+    public async Task<[Class]> Update(Guid id, [Class] updateEntity)
     {
-        var [Class] = new [Class]
-        {
-            Id = Guid.NewGuid(),
-            Name = createDto.Name,
-            Description = createDto.Description,
-            Price = createDto.Price,
-            StockQuantity = createDto.StockQuantity,
-            CreatedAt = DateTime.UtcNow,
-            IsActive = true
-        };
-
-        await _unitOfWork.[Class]s.AddAsync([Class]);
-        await _unitOfWork.SaveChangesAsync();
-
-        return MapToDto([Class]);
-    }
-
-    public async Task<[Class]Dto> UpdateAsync(Guid id, Create[Class]Dto updateDto)
-    {
-        var [Class] = await _unitOfWork.[Class]s.GetByIdAsync(id);
+        var [LowerName] = await _unitOfWork.[Class]s.GetById(id);
         
-        if ([Class] == null)
-            throw new KeyNotFoundException($""Produto com ID {id} não encontrado"");
+        if ([LowerName] == null)
+            throw new KeyNotFoundException($""[Class] com ID {id} não encontrado"");
 
-        [Class].Name = updateDto.Name;
-        [Class].Description = updateDto.Description;
-        [Class].Price = updateDto.Price;
-        [Class].StockQuantity = updateDto.StockQuantity;
-        [Class].UpdatedAt = DateTime.UtcNow;
+        //[Class].Name = updateEntity.Name;
+        //[Class].Description = updateEntity.Description;
+        //[Class].Price = updateEntity.Price;
+        //[Class].StockQuantity = updateEntity.StockQuantity;
+        //[Class].UpdatedAt = DateTime.UtcNow;
 
-        await _unitOfWork.[Class]s.UpdateAsync([Class]);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.[Class]s.Update([LowerName]);
+        await _unitOfWork.SaveChanges();
 
-        return MapToDto([Class]);
+        return [LowerName];
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> Delete(Guid id)
     {
-        var result = await _unitOfWork.[Class]s.DeleteAsync(id);
+        var result = await _unitOfWork.[Class]s.Delete(id);
         
         if (result)
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChanges();
 
         return result;
-    }
-
-    public async Task<bool> UpdateStockAsync(Guid id, int quantity)
-    {
-        var [Class] = await _unitOfWork.[Class]s.GetByIdAsync(id);
-        
-        if ([Class] == null)
-            return false;
-
-        [Class].UpdateStock(quantity);
-        await _unitOfWork.[Class]s.UpdateAsync([Class]);
-        await _unitOfWork.SaveChangesAsync();
-
-        return true;
-    }
-
-    private static [Class]Dto MapToDto([Class] [Class])
-    {
-        return new [Class]Dto
-        {
-            Id = [Class].Id,
-            Name = [Class].Name,
-            Description = [Class].Description,
-            Price = [Class].Price,
-            StockQuantity = [Class].StockQuantity,
-            IsActive = [Class].IsActive,
-            CreatedAt = [Class].CreatedAt,
-            UpdatedAt = [Class].UpdatedAt
-        };
     }
 }", ""
                 }, 
                 #endregion    
             #region Repository               
                 {@$"{projectDirectory}\{apiName}.Data\Repositories\{ClassName}Repository.cs",
-@"using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+@"using Dapper;
+using [apiName].Domain.Entities;
+using [apiName].Domain.Interfaces.Repositories;
 
 namespace [apiName].Data.Repositories;
          
@@ -466,7 +432,7 @@ public class [Class]Repository : I[Class]Repository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<Product?> GetByIdAsync(Guid id)
+    public async Task<Product?> GetById(Guid id)
     {
         using var connection = _connectionFactory.CreateConnection();
         
@@ -478,7 +444,7 @@ public class [Class]Repository : I[Class]Repository
         return await connection.QueryFirstOrDefaultAsync<Product>(sql, new { Id = id });
     }
 
-    public async Task<IEnumerable<Product>> GetAllAsync()
+    public async Task<IEnumerable<Product>> GetAll()
     {
         using var connection = _connectionFactory.CreateConnection();
         
@@ -489,19 +455,7 @@ public class [Class]Repository : I[Class]Repository
         return await connection.QueryAsync<Product>(sql);
     }
 
-    public async Task<IEnumerable<Product>> GetActiveProductsAsync()
-    {
-        using var connection = _connectionFactory.CreateConnection();
-        
-        const string sql = @""
-            SELECT Id, Name, Description, Price, StockQuantity, IsActive, CreatedAt, UpdatedAt 
-            FROM Products 
-            WHERE IsActive = 1"";
-
-        return await connection.QueryAsync<Product>(sql);
-    }
-
-    public async Task<IEnumerable<Product>> GetByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+    public async Task<IEnumerable<Product>> GetByPriceRange(decimal minPrice, decimal maxPrice)
     {
         using var connection = _connectionFactory.CreateConnection();
         
@@ -510,10 +464,10 @@ public class [Class]Repository : I[Class]Repository
             FROM Products 
             WHERE Price BETWEEN @MinPrice AND @MaxPrice"";
 
-        return await connection.QueryAsync<Product>(sql, new { MinPrice = minPrice, MaxPrice = maxPrice });
+        return await connection.QueryAsync<[Class]>(sql, new { MinPrice = minPrice, MaxPrice = maxPrice });
     }
 
-    public async Task<Product> AddAsync(Product entity)
+    public async Task<Product> Add([Class] entity)
     {
         using var connection = _connectionFactory.CreateConnection();
         
@@ -526,7 +480,7 @@ public class [Class]Repository : I[Class]Repository
         return entity;
     }
 
-    public async Task<Product> UpdateAsync(Product entity)
+    public async Task<Product> Update([Class] entity)
     {
         using var connection = _connectionFactory.CreateConnection();
         
@@ -545,7 +499,7 @@ public class [Class]Repository : I[Class]Repository
         return entity;
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> Delete(Guid id)
     {
         using var connection = _connectionFactory.CreateConnection();
         
@@ -556,7 +510,7 @@ public class [Class]Repository : I[Class]Repository
         return affectedRows > 0;
     }
 
-    public async Task<bool> ExistsAsync(Guid id)
+    public async Task<bool> Exists(Guid id)
     {
         using var connection = _connectionFactory.CreateConnection();
         
@@ -573,24 +527,25 @@ public class [Class]Repository : I[Class]Repository
 	        #endregion
             #region Domain.Infrastructure.Data
                 
-            {@$"{projectDirectory}\{apiName}.Data\Repositories\SqlConnectionFactory.cs",
+            {@$"{projectDirectory}\{apiName}.Data\Repositories\OracleConnectionFactory.cs",
                 @"using System.Data;
-using Microsoft.Data.SqlClient;
+using [apiName].Domain.Interfaces.Repositories;
+using Oracle.ManagedDataAccess.Client;
 
 namespace [apiName].Data.Repositories;
 
-public class SqlConnectionFactory : IDbConnectionFactory
+public class OracleConnectionFactory : IDbConnectionFactory
 {
     private readonly string _connectionString;
 
-    public SqlConnectionFactory(string connectionString)
+    public OracleConnectionFactory(string connectionString)
     {
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
     }
 
     public IDbConnection CreateConnection()
     {
-        return new SqlConnection(_connectionString);
+        return new OracleConnection(_connectionString);
     }
 }", ""
             },  
@@ -601,8 +556,7 @@ public class SqlConnectionFactory : IDbConnectionFactory
                 
             {@$"{projectDirectory}\{apiName}.Data\Repositories\UnitOfWork.cs",
                 @"using System.Data;
-using [apiName].Domain.Interfaces;
-using [apiName].Repositories;
+using [apiName].Domain.Interfaces.Repositories;
 
 namespace [apiName].Data.Repositories;
 
@@ -628,14 +582,14 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public async Task<int> SaveChanges(CancellationToken cancellationToken = default)
     {
         // Com Dapper, as mudanças são salvas imediatamente
         // Este método é mantido para compatibilidade com o padrão Unit of Work
         return await Task.FromResult(0);
     }
 
-    public async Task BeginTransactionAsync()
+    public async Task BeginTransaction()
     {
         _connection ??= _connectionFactory.CreateConnection();
         
@@ -647,7 +601,7 @@ public class UnitOfWork : IUnitOfWork
         await Task.CompletedTask;
     }
 
-    public async Task CommitTransactionAsync()
+    public async Task CommitTransaction()
     {
         if (_transaction == null)
             throw new InvalidOperationException(""Nenhuma transação ativa"");
@@ -665,7 +619,7 @@ public class UnitOfWork : IUnitOfWork
         await Task.CompletedTask;
     }
 
-    public async Task RollbackTransactionAsync()
+    public async Task RollbackTransaction()
     {
         if (_transaction == null)
             throw new InvalidOperationException(""Nenhuma transação ativa"");
@@ -706,9 +660,24 @@ public class UnitOfWork : IUnitOfWork
             },  
                 
 
-            #endregion              
-            };
+            #endregion
+            #region IoC               
+                {@$"{projectDirectory}\{apiName}.IoC\BootStrapper.cs",
+@"using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+namespace [Class].IoC;
 
+public static class Bootstrapper
+{
+    public static IServiceCollection RegisterServices(IServiceCollection services)
+    {
+        return services;
+    }
+}
+", ""               
+                },
+                #endregion IoC
+            };
             for (int i = 0; i < array.Length / 3; i++)
             {
                 string path = array[i, 0].Replace("[Class]", ClassName).Replace("[Quote]", quote).Replace("[apiName]", apiName).Replace("[aggregate]", aggregate);
