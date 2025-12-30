@@ -70,16 +70,19 @@ namespace Acelerador
             RunDotNetCommand($"sln add {apiName}.Data/{apiName}.Data.csproj", out output, out error); //Add Data to Solution
             RunDotNetCommand($"sln add {apiName}.IoC/{apiName}.IoC.csproj", out output, out error); //Add IoC to Solution
             
-            RunDotNetCommand($"add {apiName}.API/{apiName}.API.csproj reference {apiName}.Domain/{apiName}.Domain.csproj", out output, out error); //Add reference Domain  to API         
+            RunDotNetCommand($"add {apiName}.API/{apiName}.API.csproj reference {apiName}.Domain/{apiName}.Domain.csproj", out output, out error); //Add reference Domain  to API
+            RunDotNetCommand($"add {apiName}.API/{apiName}.API.csproj reference {apiName}.IoC/{apiName}.IoC.csproj", out output, out error); //Add reference Domain  to API
             RunDotNetCommand($"add {apiName}.Data/{apiName}.Data.csproj reference {apiName}.Domain/{apiName}.Domain.csproj", out output, out error); //Add reference Domain  to Data
             RunDotNetCommand($"add {apiName}.IoC/{apiName}.IoC.csproj reference {apiName}.Domain/{apiName}.Domain.csproj", out output, out error); //Add reference Domain  to Data
             RunDotNetCommand($"add {apiName}.IoC/{apiName}.IoC.csproj reference {apiName}.Data/{apiName}.Data.csproj", out output, out error); //Add reference Domain  to Data
             
             RunDotNetCommand($"add {apiName}.API/{apiName}.API.csproj package Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer", out output, out error); //Add package Api Versioning to API
+            RunDotNetCommand($"add {apiName}.API/{apiName}.API.csproj package Swashbuckle.AspNetCore", out output, out error); //Add package Swashbuckle to API
             RunDotNetCommand($"add {apiName}.Data/{apiName}.Data.csproj package Dapper", out output, out error); //Add package Dapper to Data
             RunDotNetCommand($"add {apiName}.Data/{apiName}.Data.csproj package Oracle.ManagedDataAccess.Core", out output, out error); //Add package Oracle to Data
             RunDotNetCommand($"add {apiName}.IoC/{apiName}.IoC.csproj package Microsoft.Extensions.DependencyInjection.Abstractions", out output, out error); //Add Dependency Injection Abstractions to IoC
             RunDotNetCommand($"add {apiName}.IoC/{apiName}.IoC.csproj package Microsoft.Extensions.Configuration", out output, out error); //Add Configuration to IoC
+            RunDotNetCommand($"add {apiName}.IoC/{apiName}.IoC.csproj package Microsoft.Extensions.Options.ConfigurationExtensions", out output, out error); //Add Configuration to IoC
             
             File.Delete( @$"{projectDirectory}\{apiName}.Domain\Class1.cs");
             File.Delete( @$"{projectDirectory}\{apiName}.Data\Class1.cs");
@@ -111,7 +114,85 @@ namespace Acelerador
 
         private static void FileText()
         {
-            string[,] array = new string[16, 3] {
+            string[,] array = new string[18, 3] {
+            #region Program
+                {@$"{projectDirectory}\{apiName}.API\Program.cs",
+                    @"
+using System.Reflection;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.OpenApi;
+using [apiName].IoC;
+using Swashbuckle.AspNetCore.SwaggerUI;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+builder.Services.AddApiVersioning(
+    options =>
+    {
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.DefaultApiVersion = new Microsoft.AspNetCore.Mvc.ApiVersion(1, 0);
+        options.ReportApiVersions = true;
+    });
+builder.Services.AddVersionedApiExplorer(
+    options =>
+    {
+        options.GroupNameFormat = ""'v'VVV"";
+        options.SubstituteApiVersionInUrl = true;
+    });
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(s =>
+{
+    s.SwaggerDoc(""v1"", new OpenApiInfo { Title = ""[apiName]"", Version = ""v1"" });
+    s.SwaggerDoc(""v2"", new OpenApiInfo { Title = ""[apiName]"", Version = ""v2"" });
+
+    var xmlFile = $""{Assembly.GetExecutingAssembly().GetName().Name}.xml"";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    s.IncludeXmlComments(xmlPath);
+
+    s.AddSecurityDefinition(""Bearer"", new OpenApiSecurityScheme
+    {
+        Description = ""JWT Authorization"",
+        Name = ""Authorization"",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = ""Bearer""
+    });
+
+    s.AddSecurityRequirement(document =>
+        new()
+        {
+            [new OpenApiSecuritySchemeReference(""Bearer"", document)] = []
+        });
+});
+
+BootStrapper.RegisterServices(builder.Services, builder.Configuration);
+
+var app = builder.Build();
+var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+
+app.MapOpenApi();
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    foreach (var description in provider.ApiVersionDescriptions)
+    {
+        options.SwaggerEndpoint($""/swagger/{description.GroupName}/swagger.json"",
+            description.GroupName.ToUpperInvariant());
+    }
+
+    options.DocExpansion(DocExpansion.List);
+});
+
+app.UseHttpsRedirection();
+
+app.MapControllers();
+
+app.Run();
+",
+                    "" },
+                #endregion
             #region Controller
                 {@$"{projectDirectory}\{apiName}.API\Controllers\v{versao}\{ClassName}Controller.cs",
                     @"
@@ -129,6 +210,7 @@ namespace [apiName].API.Controllers.v1
 {        
     [ApiVersion(""1"")]
     [Route(""api/v{version:apiVersion}/[Controller]"")]
+    [ApiController]
     public class [Class]Controller : ControllerBase
     {                
         private readonly I[Class]Service _[LowerName]Service;
@@ -136,6 +218,12 @@ namespace [apiName].API.Controllers.v1
         public [Class]Controller(I[Class]Service [LowerName]Service)        
         {            
             _[LowerName]Service = [LowerName]Service;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Get()
+        {
+            return Ok(""Product v1"");
         }
     }
 }
@@ -240,6 +328,19 @@ public abstract class BaseEntity
 }
 ", ""
                },               
+                #endregion
+            #region SeedWork
+                {@$"{projectDirectory}\{apiName}.Domain\SeedWork\AppSettings.cs",
+                    @"
+namespace MyProducts.Domain.SeedWork;
+public class AppSettings
+{
+    public const string Options = ""ApiConfiguration"";
+    public string Environment { get; set; }
+}
+", ""
+                },  
+                
                 #endregion
             #region Validator                                   
                     {@$"{projectDirectory}\{apiName}.Domain\Validators\{ClassName}Validator.cs",
@@ -414,7 +515,7 @@ public class [Class]Service : I[Class]Service
     }
 }", ""
                 }, 
-                #endregion    
+                #endregion
             #region Repository               
                 {@$"{projectDirectory}\{apiName}.Data\Repositories\{ClassName}Repository.cs",
 @"using Dapper;
@@ -665,12 +766,30 @@ public class UnitOfWork : IUnitOfWork
                 {@$"{projectDirectory}\{apiName}.IoC\BootStrapper.cs",
 @"using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
-namespace [Class].IoC;
+using [apiName].Data.Repositories;
+using [apiName].Domain.Interfaces.Repositories;
+using [apiName].Domain.Interfaces.Services;
+using [apiName].Domain.SeedWork;
+using [apiName].Domain.Services;
+namespace [apiName].IoC;
 
-public static class Bootstrapper
+public static class BootStrapper
 {
-    public static IServiceCollection RegisterServices(IServiceCollection services)
+    public static IServiceCollection RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
+        //Settings
+        var connectionString = configuration.GetConnectionString(""DefaultConnection"") 
+                               ?? throw new InvalidOperationException(""Connection string 'DefaultConnection' não encontrada."");
+        services.Configure<AppSettings>(configuration.GetSection(AppSettings.Options));
+        
+        //Domain - Services
+        services.AddScoped<I[Class]Service, [Class]Service>();
+
+        //Repository - Data
+        services.AddScoped<I[Class]Repository, [Class]Repository>();
+        services.AddSingleton<IDbConnectionFactory>(sp => new OracleConnectionFactory(connectionString));
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+
         return services;
     }
 }
