@@ -1,4 +1,5 @@
 ﻿// Acelerador/Templates/TemplateProvider.cs
+
 using System.Collections.Generic;
 
 namespace Acelerador;
@@ -98,7 +99,7 @@ public static class TemplateProvider
                 relativePathTemplate: @"[apiName].Data\Repositories\OracleConnectionFactory.cs",
                 contentTemplate: GetOracleConnectionFactoryTemplate()
             ),
-            
+
             // Data - SqliteConnectionFactory
             new Template(
                 relativePathTemplate: @"[apiName].Data\Repositories\SqliteConnectionFactory.cs",
@@ -116,12 +117,17 @@ public static class TemplateProvider
                 relativePathTemplate: @"[apiName].IoC\BootStrapper.cs",
                 contentTemplate: GetBootStrapperTemplate()
             ),
-            
+
             // IoC - Database Initializer
             new Template(
                 relativePathTemplate: @"[apiName].IoC\IDbInitializer.cs",
                 contentTemplate: GetSqliteDbInitializer()
-            )            
+            ),
+            // IoC - LogConfiguration
+            new Template(
+                relativePathTemplate: @"[apiName].IoC\LogConfiration.cs",
+                contentTemplate: GetLogConfigurationTemplate()
+            )
         };
     }
 
@@ -130,6 +136,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.OpenApi;
 using [apiName].IoC;
+using Serilog;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -180,6 +187,7 @@ builder.Services.AddSwaggerGen(s =>
 });
 
 BootStrapper.RegisterServices(builder.Services, builder.Configuration);
+builder.Host.UseSerilog(Log.Logger);
 
 var app = builder.Build();
 await app.Services.InitializeDatabaseAsync(); //Configuração e inicialização do banco de dados em memória
@@ -664,7 +672,7 @@ public class OracleConnectionFactory : IDbConnectionFactory
     }
 }
 ";
-    
+
     private static string GetSqliteConnectionFactoryTemplate() => @"
 using System.Data;
 using [apiName].Domain.Interfaces.Repositories;
@@ -686,8 +694,8 @@ public class SqliteConnectionFactory : IDbConnectionFactory
         return new SqliteConnection(_connectionString);
     }
 }
-";    
-    
+";
+
     private static string GetSqliteDbInitializer() => @"
 using Microsoft.Data.Sqlite;
 
@@ -732,7 +740,7 @@ public class SqliteDbInitializer : IDbInitializer
         }
     }
 }
-";      
+";
 
     private static string GetUnitOfWorkTemplate() => @"
 using System.Data;
@@ -840,6 +848,7 @@ public class UnitOfWork : IUnitOfWork
     private static string GetBootStrapperTemplate() => @"
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using Serilog;
 using [apiName].Data.Repositories;
 using [apiName].Domain.Interfaces.Repositories;
 using [apiName].Domain.Interfaces.Services;
@@ -852,6 +861,10 @@ public static class BootStrapper
 {
     public static IServiceCollection RegisterServices(IServiceCollection services, IConfiguration configuration)
     {
+        //Serilog
+        LogConfiguration.CreateLogger();
+        services.AddLogging(builder => { builder.AddSerilog(); });
+
         //var connectionString = configuration.GetConnectionString(""DefaultConnection"")
         //                       ?? throw new InvalidOperationException(""Connection string 'DefaultConnection' não encontrada."");
         var connectionString = ""Data Source=[LowerName].db"";
@@ -872,6 +885,32 @@ public static class BootStrapper
     {
         var initializer = serviceProvider.GetRequiredService<IDbInitializer>();
         await initializer.InitializeAsync();
+    }
+}
+";
+
+    private static string GetLogConfigurationTemplate() => @"
+using Serilog;
+using Serilog.Events;
+using Serilog.Exceptions;
+
+namespace [apiName].IoC;
+
+public static class LogConfiguration
+{
+    public static void CreateLogger()
+    {
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override(""System.Net.Http.HttpClient"", LogEventLevel.Warning)
+            .MinimumLevel.Override(""Microsoft.AspNetCore"", LogEventLevel.Warning)
+            .MinimumLevel.Override(""Microsoft.EntityFrameworkCore"", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .Enrich.WithExceptionDetails()
+            .WriteTo.Console(
+                outputTemplate:
+                ""[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties}{NewLine}{Exception}{NewLine}"")
+            .CreateLogger();
     }
 }
 ";

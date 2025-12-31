@@ -90,7 +90,11 @@ public static class ScaffoldOptionsBuilder
                     "Microsoft.Extensions.DependencyInjection.Abstractions",
                     "Microsoft.Extensions.Configuration",
                     "Microsoft.Extensions.Options.ConfigurationExtensions",
-                    "Microsoft.Data.Sqlite"
+                    "Microsoft.Data.Sqlite",
+                    "Serilog",
+                    "Serilog.AspNetCore",
+                    "Serilog.Exceptions",
+                    "Serilog.Sinks.Console",
                 },
                 References = new List<string>
                 {
