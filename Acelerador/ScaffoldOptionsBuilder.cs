@@ -13,8 +13,7 @@ public static class ScaffoldOptionsBuilder
             ["apiName"] = input.ApiName,
             ["Class"] = input.EntityName,
             ["LowerName"] = ToLowerFirstChar(input.EntityName),
-            ["versao"] = input.ApiVersion,
-            ["aggregate"] = input.AggregateName ?? input.EntityName
+            ["versao"] = input.ApiVersion
         };
 
         var templates = TemplateProvider.GetTemplates();

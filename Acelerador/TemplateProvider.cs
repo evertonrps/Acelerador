@@ -716,7 +716,7 @@ public class SqliteDbInitializer : IDbInitializer
 
             var command = connection.CreateCommand();
             command.CommandText = @""
-            CREATE TABLE IF NOT EXISTS Product (
+            CREATE TABLE IF NOT EXISTS [Class] (
                 Id TEXT PRIMARY KEY,
                 CreatedAt DATE NOT NULL,
                 UpdatedAt DATE NOT NULL
