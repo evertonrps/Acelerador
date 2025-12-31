@@ -158,6 +158,10 @@ builder.Services.AddSwaggerGen(s =>
     var xmlFile = $""{Assembly.GetExecutingAssembly().GetName().Name}.xml"";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     s.IncludeXmlComments(xmlPath);
+    /* To generate XML documentation file, add the following to the .csproj file:
+     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+     <NoWarn>(NoWarn);1591</NoWarn>
+    */
 
     s.AddSecurityDefinition(""Bearer"", new OpenApiSecurityScheme
     {
@@ -178,7 +182,7 @@ builder.Services.AddSwaggerGen(s =>
 BootStrapper.RegisterServices(builder.Services, builder.Configuration);
 
 var app = builder.Build();
-await app.Services.InitializeDatabaseAsync();
+await app.Services.InitializeDatabaseAsync(); //Configuração e inicialização do banco de dados em memória
 var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
 
 app.MapOpenApi();
@@ -221,19 +225,88 @@ namespace [apiName].API.Controllers.v[versao]
             _[LowerName]Service = [LowerName]Service;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            var [LowerName]s = await _[LowerName]Service.GetAll();
-            return Ok([LowerName]s);
-        }
-
+		/// <summary>
+        /// Create a new [Class]
+        /// </summary>
+        /// <param name=""model"">[Class]</param>
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof([Class]Model))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(string))]        
         [HttpPost]
         public async Task<IActionResult> Post([Class]Model model)
         {
             var [LowerName] = await _[LowerName]Service.Create(model.ToEntity());
-            return Ok([LowerName]);
+            return Ok([LowerName].ToViewModel());
         }
+
+        /// <summary>
+        /// Get [Class] by id
+        /// </summary>
+        /// <param name=""id"">[Class] ID</param>
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof([Class]Model))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(string))]
+        [HttpGet(""{id}"")]
+        public async Task<IActionResult> GetById(string id)
+        {
+            var [LowerName] = await _[LowerName]Service.GetById(id);
+            if ([LowerName] == null)
+            {
+                return NotFound(""[Class] not found"");
+            }
+
+            return Ok([LowerName].ToViewModel());
+        }
+
+        /// <summary>
+        /// Get all [Class]s
+        /// </summary>
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<[Class]Model>))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(string))]
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var [LowerName]s = await _[LowerName]Service.GetAll();
+            return Ok([LowerName]s.ToViewModelList());
+        }
+
+        /// <summary>
+        /// Update [Class] by id
+        /// </summary>
+        /// <param name=""id"">[Class] ID</param>
+        /// <param name=""model"">[Class]</param>
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof([Class]Model))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(string))]
+        [HttpPut(""{id}"")]
+        public async Task<IActionResult> Put(string id, [Class]Model model)
+        {
+            var [LowerName] = await _[LowerName]Service.Update(id, model.ToEntity());
+            return Ok([LowerName].ToViewModel());
+        }
+
+        /// <summary>
+        /// Delete [Class] by id
+        /// </summary>
+        /// <param name=""id"">[Class] ID</param>
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(bool))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError, Type = typeof(string))]
+        [HttpDelete(""{id}"")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            var ret = await _[LowerName]Service.Delete(id);
+            if (ret)
+            {
+                return Ok(ret);
+            }
+
+            return NotFound();
+        }        
 
     }
 }
@@ -347,11 +420,11 @@ namespace [apiName].Domain.Interfaces.Services
 {
     public interface I[Class]Service
     {
-        Task<[Class]?> GetById(Guid id);
+        Task<[Class]?> GetById(string id);
         Task<IEnumerable<[Class]>> GetAll();
         Task<[Class]> Create([Class] createEntity);
-        Task<[Class]> Update(Guid id, [Class] updateEntity);
-        Task<bool> Delete(Guid id);
+        Task<[Class]> Update(string id, [Class] updateEntity);
+        Task<bool> Delete(string id);
     }
 }
 ";
@@ -372,7 +445,7 @@ public class [Class]Service : I[Class]Service
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<[Class]?> GetById(Guid id)
+    public async Task<[Class]?> GetById(string id)
     {
         var [LowerName] = await _unitOfWork.[Class]s.GetById(id);
         return [LowerName];
@@ -394,12 +467,14 @@ public class [Class]Service : I[Class]Service
         return [LowerName];
     }
 
-    public async Task<[Class]> Update(Guid id, [Class] updateEntity)
+    public async Task<[Class]> Update(string id, [Class] updateEntity)
     {
         var [LowerName] = await _unitOfWork.[Class]s.GetById(id);
 
         if ([LowerName] == null)
             throw new KeyNotFoundException($""[Class] com ID {id} não encontrado"");
+
+        [LowerName].UpdatedAt = DateTime.UtcNow;
 
         await _unitOfWork.[Class]s.Update([LowerName]);
         await _unitOfWork.SaveChanges();
@@ -407,7 +482,7 @@ public class [Class]Service : I[Class]Service
         return [LowerName];
     }
 
-    public async Task<bool> Delete(Guid id)
+    public async Task<bool> Delete(string id)
     {
         var result = await _unitOfWork.[Class]s.Delete(id);
 
@@ -428,12 +503,12 @@ namespace [apiName].Domain.Interfaces.Repositories
 {
     public interface IRepository<T> where T : BaseEntity
     {
-        Task<T?> GetById(Guid id);
+        Task<T?> GetById(string id);
         Task<IEnumerable<T>> GetAll();
         Task<T> Add(T entity);
         Task<T> Update(T entity);
-        Task<bool> Delete(Guid id);
-        Task<bool> Exists(Guid id);
+        Task<bool> Delete(string id);
+        Task<bool> Exists(string id);
     }
 }
 ";
@@ -493,7 +568,7 @@ public class [Class]Repository : I[Class]Repository
         _connectionFactory = connectionFactory;
     }
 
-    public async Task<[Class]?> GetById(Guid id)
+    public async Task<[Class]?> GetById(string id)
     {
         using var connection = _connectionFactory.CreateConnection();
 
@@ -543,7 +618,7 @@ public class [Class]Repository : I[Class]Repository
         return entity;
     }
 
-    public async Task<bool> Delete(Guid id)
+    public async Task<bool> Delete(string id)
     {
         using var connection = _connectionFactory.CreateConnection();
 
@@ -554,7 +629,7 @@ public class [Class]Repository : I[Class]Repository
         return affectedRows > 0;
     }
 
-    public async Task<bool> Exists(Guid id)
+    public async Task<bool> Exists(string id)
     {
         using var connection = _connectionFactory.CreateConnection();
 
@@ -792,6 +867,7 @@ public static class BootStrapper
         return services;
     }
 
+    //Configuração e inicialização do banco de dados em memória
     public static async Task InitializeDatabaseAsync(this IServiceProvider serviceProvider)
     {
         var initializer = serviceProvider.GetRequiredService<IDbInitializer>();
