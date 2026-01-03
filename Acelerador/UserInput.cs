@@ -3,5 +3,6 @@
 public record UserInput(
     string ApiName,
     string EntityName,
-    string ApiVersion
+    string ApiVersion,
+    string Type
 );

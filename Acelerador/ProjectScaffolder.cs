@@ -115,6 +115,36 @@ public class ProjectScaffolder
         return new ScaffoldResult(false, results, ex.Message);
     }
 }
+    
+     public async Task<ScaffoldResult> ScaffoldEntityAsync(ScaffoldOptions options, CancellationToken cancellationToken = default)
+{
+    var results = new List<CommandResult>();
+    try
+    {
+        var targetRoot = Path.GetFullPath(Path.Combine(_baseDirectory, options.RelativePath ?? string.Empty));
+        
+        // escrever arquivos de template (com renderização de variáveis)
+        foreach (var t in options.Templates)
+        {
+            var renderedRelativePath = RenderTemplate(t.RelativePathTemplate, options.Variables);
+            var filePath = Path.Combine(targetRoot, renderedRelativePath);
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? targetRoot);
+
+            var renderedContent = RenderTemplate(t.ContentTemplate, options.Variables);
+            await File.WriteAllTextAsync(filePath, renderedContent, cancellationToken);
+        }
+
+        return new ScaffoldResult(true, results);
+    }
+    catch (OperationCanceledException)
+    {
+        return new ScaffoldResult(false, results, "Operação cancelada");
+    }
+    catch (Exception ex)
+    {
+        return new ScaffoldResult(false, results, ex.Message);
+    }
+}
 
 
     private static string RenderTemplate(string template, IDictionary<string, string>? variables)

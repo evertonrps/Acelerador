@@ -1,4 +1,5 @@
 ﻿// Acelerador/Program.cs
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -22,23 +23,46 @@ class Program
             return;
         }
 
-        // 2. Criar runner e scaffolder
-        var baseDir = DirectoryHelper.GetBaseDirectory();
-        var projectDir = DirectoryHelper.GetProjectDirectory(baseDir, input.ApiName);
-        Directory.CreateDirectory(projectDir);
+        if (input.Type == "New Project")
+        {
+            // 2. Criar runner e scaffolder
+            var baseDir = DirectoryHelper.GetBaseDirectory();
+            var projectDir = DirectoryHelper.GetProjectDirectory(baseDir, input.ApiName);
+            Directory.CreateDirectory(projectDir);
 
-        var runner = new DotnetRunner(projectDir);
-        var scaffolder = new ProjectScaffolder(projectDir, runner);
+            var runner = new DotnetRunner(projectDir);
+            var scaffolder = new ProjectScaffolder(projectDir, runner);
 
-        // 3. Executar scaffold
-        Console.WriteLine($"\nCriando projeto {input.ApiName}...\n");
-        var scaffoldOptions = ScaffoldOptionsBuilder.Build(input);
-        var result = await scaffolder.ScaffoldAsync(scaffoldOptions);
+            // 3. Executar scaffold
+            Console.WriteLine($"\nCriando projeto {input.ApiName}...\n");
+            var scaffoldOptions = ScaffoldOptionsBuilder.ProjectBuild(input);
+            var result = await scaffolder.ScaffoldAsync(scaffoldOptions);
 
-        // 4. Exibir resultado
-        ResultPresenter.Display(result);
+            // 4. Exibir resultado
+            ResultPresenter.Display(result);
 
-        Console.WriteLine("\nPressione qualquer tecla para sair...");
-        Console.ReadLine();
+            Console.WriteLine("\nPressione qualquer tecla para sair...");
+            Console.ReadLine();
+        }
+        else
+        {
+            // 2. Criar runner e scaffolder
+            var baseDir = DirectoryHelper.GetBaseDirectory();
+            var projectDir = DirectoryHelper.GetProjectDirectory(baseDir, input.ApiName);
+
+            var runner = new DotnetRunner(projectDir);
+            var scaffolder = new ProjectScaffolder(projectDir, runner);
+
+            // 3. Executar scaffold
+            Console.WriteLine($"\nCriando entidade {input.EntityName}...\n");
+            var scaffoldOptions = ScaffoldOptionsBuilder.EntityBuild(input);
+            var result = await scaffolder.ScaffoldEntityAsync(scaffoldOptions);
+
+            // 4. Exibir resultado
+            ResultPresenter.Display(result);
+
+            Console.WriteLine("\nPressione qualquer tecla para sair...");
+            Console.ReadLine();
+        }
     }
 }

@@ -6,7 +6,7 @@ namespace Acelerador;
 
 public static class ScaffoldOptionsBuilder
 {
-    public static ScaffoldOptions Build(UserInput input)
+    public static ScaffoldOptions ProjectBuild(UserInput input)
     {
         var tokens = new Dictionary<string, string>
         {
@@ -16,7 +16,7 @@ public static class ScaffoldOptionsBuilder
             ["versao"] = input.ApiVersion
         };
 
-        var templates = TemplateProvider.GetTemplates();
+        var templates = TemplateProvider.GetProjectTemplates();
         var renderer = new TemplateRenderer(tokens);
 
         // Renderizar os templates ANTES de criar ScaffoldOptions
@@ -32,6 +32,33 @@ public static class ScaffoldOptionsBuilder
 
         return options;
     }
+    
+    public static ScaffoldOptions EntityBuild(UserInput input)
+    {
+        var tokens = new Dictionary<string, string>
+        {
+            ["apiName"] = input.ApiName,
+            ["Class"] = input.EntityName,
+            ["LowerName"] = ToLowerFirstChar(input.EntityName),
+            ["versao"] = input.ApiVersion
+        };
+
+        var templates = TemplateProvider.GetEntityTemplates();
+        var renderer = new TemplateRenderer(tokens);
+
+        // Renderizar os templates ANTES de criar ScaffoldOptions
+        var renderedTemplates = RenderTemplates(templates, renderer);
+
+        var options = new ScaffoldOptions
+        {
+            SolutionName = input.ApiName,
+            FailOnCommandError = false,
+            Projects = BuildProjectDescriptors(input.ApiName),
+            Templates = renderedTemplates
+        };
+
+        return options;
+    }    
 
     private static List<Template> RenderTemplates(List<Template> templates, TemplateRenderer renderer)
     {

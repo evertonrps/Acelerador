@@ -6,7 +6,7 @@ namespace Acelerador;
 
 public static class TemplateProvider
 {
-    public static List<Template> GetTemplates()
+    public static List<Template> GetProjectTemplates()
     {
         return new List<Template>
         {
@@ -130,6 +130,60 @@ public static class TemplateProvider
             )
         };
     }
+    
+public static List<Template> GetEntityTemplates()
+    {
+        return new List<Template>
+        {
+            // Controller
+            new Template(
+                relativePathTemplate: @"[apiName].API\Controllers\v[versao]\[Class]Controller.cs",
+                contentTemplate: GetControllerTemplate()
+            ),
+
+            // ViewModel
+            new Template(
+                relativePathTemplate: @"[apiName].API\ViewModels\[Class]ViewModel.cs",
+                contentTemplate: GetViewModelTemplate()
+            ),
+
+            // Mapper
+            new Template(
+                relativePathTemplate: @"[apiName].API\MapperExtensions\[Class]MapperExtension.cs",
+                contentTemplate: GetMapperTemplate()
+            ),
+
+            // Domain - Entity
+            new Template(
+                relativePathTemplate: @"[apiName].Domain\Entities\[Class].cs",
+                contentTemplate: GetEntityTemplate()
+            ),
+
+            // Domain - Service Interface
+            new Template(
+                relativePathTemplate: @"[apiName].Domain\Interfaces\Services\I[Class]Service.cs",
+                contentTemplate: GetServiceInterfaceTemplate()
+            ),
+
+            // Domain - Service
+            new Template(
+                relativePathTemplate: @"[apiName].Domain\Services\[Class]Service.cs",
+                contentTemplate: GetServiceTemplate()
+            ),
+            
+            // Domain - Generic Repository Interface
+            new Template(
+                relativePathTemplate: @"[apiName].Domain\Interfaces\Repositories\I[Class]Repository.cs",
+                contentTemplate: GetGenericRepositoryInterfaceTemplate()
+            ),
+
+            // Data - Repository
+            new Template(
+                relativePathTemplate: @"[apiName].Data\Repositories\[Class]Repository.cs",
+                contentTemplate: GetRepositoryTemplate()
+            ),
+        };
+    }    
 
     private static string GetProgramTemplate() => @"
 using System.Reflection;
@@ -537,17 +591,17 @@ namespace [apiName].Domain.Interfaces.Repositories
 using System;
 using System.Threading.Tasks;
 
-namespace [apiName].Domain.Interfaces.Repositories
+namespace [apiName].Domain.Interfaces.Repositories;
+
+public interface IUnitOfWork : IDisposable
 {
-    public interface IUnitOfWork : IDisposable
-    {
-        I[Class]Repository [Class]s { get; }
-        Task<int> SaveChanges(CancellationToken cancellationToken = default);
-        Task BeginTransaction();
-        Task CommitTransaction();
-        Task RollbackTransaction();
-    }
+    I[Class]Repository [Class]s { get; }
+    Task<int> SaveChanges(CancellationToken cancellationToken = default);
+    Task BeginTransaction();
+    Task CommitTransaction();
+    Task RollbackTransaction();
 }
+
 ";
 
     private static string GetDbConnectionFactoryTemplate() => @"
@@ -868,11 +922,15 @@ public static class BootStrapper
 
         //var connectionString = configuration.GetConnectionString(""DefaultConnection"")
         //                       ?? throw new InvalidOperationException(""Connection string 'DefaultConnection' não encontrada."");
-        var connectionString = ""Data Source=[LowerName].db"";
+        var connectionString = ""Data Source=[apiName].db"";
         services.Configure<AppSettings>(configuration.GetSection(AppSettings.Options));
 
+        //Services
         services.AddScoped<I[Class]Service, [Class]Service>();
+
+        //Repositories
         services.AddScoped<I[Class]Repository, [Class]Repository>();
+
         services.AddSingleton<IDbConnectionFactory>(sp => new SqliteConnectionFactory(connectionString));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

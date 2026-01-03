@@ -21,10 +21,7 @@ public static class UserInputProvider
 
         if (!actions.TryGetValue(Console.ReadLine() ?? string.Empty, out var option))
             return null;
-
-        if (option != "New Project")
-            throw new NotImplementedException();
-
+        
         Console.WriteLine("Digite o nome do projeto: ");
         var apiName = Console.ReadLine();
         
@@ -34,6 +31,6 @@ public static class UserInputProvider
         Console.WriteLine("Digite o número da versão da API:");
         var apiVersion = Console.ReadLine() ?? "1";
         
-        return new UserInput(apiName, entityName, apiVersion);
+        return new UserInput(apiName, entityName, apiVersion, option);
     }
 }
