@@ -58,7 +58,7 @@ public static class ScaffoldOptionsBuilder
                 Template = "webapi", 
                 Packages = new List<string>
                 {
-                    "Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer", "Swashbuckle.AspNetCore"
+                    "Asp.Versioning.Mvc.ApiExplorer", "Swashbuckle.AspNetCore"
                 },
                 References = new List<string>
                 {

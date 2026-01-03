@@ -133,7 +133,7 @@ public static class TemplateProvider
 
     private static string GetProgramTemplate() => @"
 using System.Reflection;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Asp.Versioning.ApiExplorer;
 using Microsoft.OpenApi;
 using [apiName].IoC;
 using Serilog;
@@ -142,18 +142,18 @@ using Swashbuckle.AspNetCore.SwaggerUI;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
 builder.Services.AddApiVersioning(
     options =>
     {
         options.AssumeDefaultVersionWhenUnspecified = true;
-        options.DefaultApiVersion = new Microsoft.AspNetCore.Mvc.ApiVersion(1, 0);
         options.ReportApiVersions = true;
-    });
-builder.Services.AddVersionedApiExplorer(
-    options =>
+        options.AssumeDefaultVersionWhenUnspecified = true;
+    })
+    .AddApiExplorer(p=>
     {
-        options.GroupNameFormat = ""'v'VVV"";
-        options.SubstituteApiVersionInUrl = true;
+        p.GroupNameFormat = ""'v'VVV"";
+        p.SubstituteApiVersionInUrl = true;
     });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -214,6 +214,7 @@ app.Run();
 ";
 
     private static string GetControllerTemplate() => @"
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using [apiName].Domain.Interfaces.Services;
 using [apiName].API.ViewModel;
